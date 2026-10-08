@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Medições</title>
+    <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 50px; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .badge-vetor { margin-right: 4px; background-color: #6c757d !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">📊 Histórico de Leituras</h2>
+        <div>
+            <a href="/dados" class="btn btn-outline-secondary btn-sm">Atualizar</a>
+            <a href="/" class="btn btn-outline-primary btn-sm">Voltar</a>
+        </div>
+    </div>
+
+    <h2 class="text-primary">Altura</h2>
+
+    <table class="table table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Data/Hora</th>
+                <th>Média Final (cm)</th>
+                <th>Vetor de Amostras (Brutas)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in leituras %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td class="text-muted">{{ item.medido_em }}</td>
+                <td><strong>{{ item.media_final }} cm</strong></td>
+                <td>
+                    {% for amostra in item.vetor_amostras %}
+                        <span class="badge badge-vetor">{{ amostra }}</span>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center text-muted">Nenhuma leitura encontrada no banco.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="text-primary">Peso</h2>
+
+    <table class="table table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Data/Hora</th>
+                <th>Valor</th>
+                <th>Imagem 1</th>
+                <th>Imagem 2</th>
+                <th>Imagem 3</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in balanca %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td class="text-muted">{{ item.medido_em }}</td>
+                <td><strong>{{ item.valor_visor }} kg</strong></td>
+                <td>
+                    <img src="{{ item.imagem1 }}" alt="Imagem da balança" class="img-fluid" />
+                </td>
+                <td>
+                    <img src="{{ item.imagem2 }}" alt="Imagem da balança" class="img-fluid" />
+                </td>
+                <td>
+                    <img src="{{ item.imagem3 }}" alt="Imagem da balança" class="img-fluid" />
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center text-muted">Nenhuma leitura encontrada no banco.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<script src="{{ url_for('static', filename='bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

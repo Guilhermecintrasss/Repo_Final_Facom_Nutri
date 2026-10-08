@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Altura</title>
+    <script src="{{ url_for('static', filename='socket.io.js') }}"></script>
+    <style>
+        * { box-sizing: border-box; padding: 0; margin: 0; }
+        body { font-family: sans-serif; background: #121212; position: relative; color: white; text-align: center; display: flex; justify-content: center; align-items: center; height: 100dvh; }
+        span {position: absolute; align-self: start; color: #00e676; margin: 100px 0;}
+        .historico { position: absolute; top: 20px; right: 20px; color: #00e676; text-decoration: none; font-size: 0.9rem; }
+        .display { font-size: 5rem; color: #00e676; margin: 20px; }
+        input { padding: 10px; border-radius: 5px; border: none; }
+        .after { display: none; text-decoration: none;}
+        button, .after { padding: 10px 20px; margin: 0 10px; background: #2979ff; color: white; border: none; cursor: pointer; }
+        .secondary { background: #ff1744; }
+        </style>
+</head>
+<body>
+    <span class="aviso"></span>
+    <a href="/dados" class="btn btn-outline-secondary btn-sm historico">Ver Histórico</a>
+    <div class="container">
+        <h1>Leitura do ESP32 (LIDAR)</h1>
+        <div class="display" id="valor_esp">--</div>
+        <p>Centímetros</p>
+
+        <hr style="width: 50%; margin: 40px auto;">
+        
+        <button class="before secondary" onclick="calibrar()">Calibrar o ESP32</button>
+        <button class="before" onclick="enviar()">MEDIR ALTURA</button>
+        <a class="after secondary" href="/altura">Repetir medida</a>
+        <a class="after" href="/peso">MEDIR PESO</a>
+    </div>
+
+    <script>
+        console.log('Conectando ao WebSocket...');
+        const aviso = document.querySelector('.aviso');
+
+        // Conexão WebSocket local
+        const socket = io();
+        socket.on('connect', function() {
+            console.log('Conectado ao servidor SocketIO!');
+        });
+
+        // Escutando dados vindos do ESP32 via Python
+        socket.on('dados_esp', function(msg) {
+            console.log('Recebido do ESP32:', msg.valor);
+            valor = parseFloat(msg.valor).toFixed(2);
+            document.getElementById('valor_esp').innerText = valor;
+            aviso.style.color = "#00e676";
+            aviso.innerText = "";
+            document.querySelectorAll('.before').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.after').forEach(el => el.style.display = 'inline-block');
+          });
+          
+          socket.on('erro_esp', function(msg) {
+            console.error('Erro recebido do ESP32:', msg.detalhes);
+            aviso.style.color = "#ff1744";
+            aviso.innerText = "Erro ao se comunicar com o ESP32.";
+        });
+
+        // Função para enviar dados (sua rota antiga /enviar)
+        function enviar() {
+            const aviso = document  .querySelector('.aviso');
+            aviso.innerText = "Enviando comando para medir altura...";
+            fetch('/enviar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mensagem: "M"})
+            })
+            .then(response => response.json())
+            .then(data => console.log('Enviado:', data));
+            aviso.innerText = "Comando de medição enviado! Aguarde a resposta do ESP32...";
+        }
+        function calibrar() {
+            const aviso = document.querySelector('.aviso');
+            aviso.innerText = "Enviando comando para calibrar o ESP32...";
+            fetch('/enviar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mensagem: "C"})
+            })
+            .then(response => response.json())
+            .then(data => console.log('Enviado:', data));
+            aviso.innerText = "Comando de calibração enviado! Aguarde o processo ser concluído...";
+            setTimeout(() => {
+                aviso.innerText = "Calibração concluída! Você pode agora medir a altura.";
+                setTimeout(() => {
+                aviso.innerText = "";
+                }, 2000);
+            }, 5000); // Simula um tempo de calibração de 5 segundos
+             // Limpa o aviso após 2 segundos
+        }
+    </script>
+</body>
+</html>

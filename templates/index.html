@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Medição Integrado - FACOM/FACFAN</title>
+    <script src="{{ url_for('static', filename='socket.io.js') }}"></script>
+    <style>
+        * { box-sizing: border-box; padding: 0; margin: 0; }
+        body { 
+            font-family: sans-serif; 
+            background: #121212; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100dvh; 
+            overflow: hidden;
+        }
+
+        /* Topo */
+        .header {
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .aviso { 
+            position: absolute; 
+            top: 85px; 
+            width: 100%; 
+            text-align: center; 
+            color: #00e676; 
+            font-size: 0.9rem;
+            height: 20px;
+        }
+
+        /* Layout Principal */
+        .main-content {
+            display: flex;
+            flex: 1;
+            position: relative;
+        }
+
+        .section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: background 0.3s;
+        }
+
+        .section-left { border-right: 1px solid #333; }
+
+        /* Displays e Textos */
+        .display { font-size: 5.5rem; color: #00e676; margin: 10px 0; font-weight: bold; }
+        .unit { color: #888; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px; }
+        h2 { font-size: 1.2rem; color: #bbb; margin-bottom: 10px; }
+
+        /* Botões */
+        button, .btn-link { 
+            padding: 12px 24px; 
+            border-radius: 4px; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: bold; 
+            text-decoration: none;
+            text-align: center;
+            transition: 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary { background: #2979ff; color: white; }
+        .btn-primary:hover { background: #1565c0; }
+        
+        .btn-danger { background: #ff1744; color: white; margin-bottom: 20px; }
+        .m-0 { margin: 0; }
+        .btn-danger:hover { background: #d50000; }
+
+        .btn-reset-all { background: #555; color: white; }
+        .btn-reset-all:hover { background: #777; }
+
+        .btn-outline { background: transparent; border: 1px solid #555; color: #ccc; }
+        .btn-outline:hover { border-color: white; color: white; }
+
+        /* Rodapé */
+        .footer {
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+        }
+
+        /* Lógica de Visibilidade Individual */
+        .btn-individual-reset { visibility: hidden; opacity: 0; }
+        .has-value .btn-individual-reset { visibility: visible; opacity: 1; }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <button class="btn-reset-all" onclick="resetTudo()">ZERAR TUDO</button>
+    </div>
+
+    <span class="aviso" id="aviso_status"></span>
+
+    <main class="main-content">
+        <!-- Lado Esquerdo: Altura (LIDAR) -->
+        <section class="section section-left" id="section-altura">
+            <button class="btn-danger btn-individual-reset" onclick="resetMedida('altura')">Zerar Altura</button>
+            <h2>ALTURA</h2>
+            <div class="display" id="valor_altura">--</div>
+            <p class="unit">Centímetros</p>
+            <button class="btn-primary" onclick="medirAltura()">MEDIR ALTURA</button>
+        </section>
+
+        <!-- Lado Direito: Peso (Balança) -->
+        <section class="section" id="section-peso">
+            <button class="btn-danger btn-individual-reset" onclick="resetMedida('peso')">Zerar Peso</button>
+            <h2>PESO</h2>
+            <div class="display" id="valor_peso">0.0</div>
+            <p class="unit">Quilogramas</p>
+            <button class="btn-primary" onclick="medirPeso()">CAPTURAR PESO</button>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <a href="/dados" class="btn-link btn-outline">Ver Histórico</a>
+        <a href="/configurar_webcam" class="btn-link btn-outline">Configurar Câmera</a>
+        <button class="btn-danger m-0" onclick="calibrarAltura()">Calibrar Sensor de Altura</button>
+    </footer>
+
+    <script>
+        const socket = io();
+        const aviso = document.getElementById('aviso_status');
+
+        // --- WebSockets ---
+
+        socket.on('connect', () => console.log('Conectado ao servidor!'));
+
+        // Resposta Altura (ESP32)
+        socket.on('dados_esp', function(msg) {
+            const valor = parseFloat(msg.valor).toFixed(2);
+            document.getElementById('valor_altura').innerText = valor;
+            document.getElementById('section-altura').classList.add('has-value');
+            showAviso("Altura recebida com sucesso!", "#00e676");
+        });
+
+        // Resposta Peso (Webcam/OCR)
+        socket.on('dados_balanca', function(msg) {
+            const valor = parseFloat(msg.valor).toFixed(2);
+            document.getElementById('valor_peso').innerText = valor;
+            document.getElementById('section-peso').classList.add('has-value');
+            showAviso("Peso capturado!", "#00e676");
+        });
+
+        socket.on('erro_esp', function(msg) {
+            showAviso("Erro na comunicação com o hardware.", "#ff1744");
+        });
+
+        // --- Funções de Ação ---
+
+        function medirAltura() {
+            showAviso("Enviando comando para medir altura...", "#2979ff");
+            fetch('/enviar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mensagem: "M"})
+            });
+        }
+
+        function medirPeso() {
+            showAviso("Capturando imagem da balança...", "#2979ff");
+            fetch('/medir_peso', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mensagem: "M"})
+            });
+        }
+
+        function calibrarAltura() {
+            showAviso("Iniciando calibração do LIDAR...", "#ff1744");
+            fetch('/enviar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mensagem: "C"})
+            });
+            setTimeout(() => showAviso("Calibração finalizada!", "#00e676"), 5000);
+        }
+
+        // --- Funções de Reset ---
+
+        function resetMedida(tipo) {
+            if(tipo === 'altura') {
+                document.getElementById('valor_altura').innerText = "--";
+                document.getElementById('section-altura').classList.remove('has-value');
+            } else {
+                document.getElementById('valor_peso').innerText = "0.0";
+                document.getElementById('section-peso').classList.remove('has-value');
+            }
+        }
+
+        function resetTudo() {
+            resetMedida('altura');
+            resetMedida('peso');
+            showAviso("Sistema resetado.", "#ccc");
+            setTimeout(() => aviso.innerText = "", 2000);
+        }
+
+        function showAviso(texto, cor) {
+            aviso.innerText = texto;
+            aviso.style.color = cor;
+        }
+    </script>
+</body>
+</html>

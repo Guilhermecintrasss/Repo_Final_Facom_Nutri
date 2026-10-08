@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Webcam ao Vivo</title>
+    <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
+</head>
+<body class="bg-dark text-white text-center">
+    <div class="container mt-5">
+        <h1>Monitoramento em Tempo Real</h1>
+        <div class="mt-4">
+            <img src="{{ url_for('Peso.video_feed') }}" width="720" class="img-fluid rounded border border-primary">
+        </div>
+        <p class="mt-3 text-white">Capturando direto do servidor (Mac)</p>
+        <a href="/">Voltar para o início</a>
+    </div>
+    <script src="{{ url_for('static', filename='bootstrap.bundle.min.js') }}"></script>
+
+</body>
+</html>
