@@ -30,7 +30,17 @@ offset = 0
 
 
 def decode_digito(b: int) -> int:
-    return (BASE - b) // 2
+    # Os bytes finais do pacote às vezes chegam deslocados à esquerda (1F -> 3E -> 7C).
+    # Os dígitos válidos são <= 0x1F, então dá para desfazer até 2 deslocamentos.
+    original = b
+    for _ in range(3):
+        d = (BASE - b) // 2
+        if 0 <= d <= 9:
+            return d
+        if b == 0 or b & 1:
+            break
+        b >>= 1
+    return (BASE - original) // 2
 
 
 def decode_peso(pkt: bytes):
@@ -78,6 +88,10 @@ def ler_continuo():
                 pkt, buf = buf.split(b"\x00", 1)
 
                 if len(pkt) < 7:
+                    continue
+
+                # Só o campo de peso tem 0x27 (ponto decimal) no byte 4; os demais são ignorados
+                if len(pkt) > 4 and pkt[4] != 0x27:
                     continue
 
                 resultado = decode_peso(pkt)
