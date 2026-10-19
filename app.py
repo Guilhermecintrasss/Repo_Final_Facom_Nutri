@@ -30,7 +30,10 @@ except ImportError:
 # Para um nome fixo, use /dev/serial/by-id/... (ls /dev/serial/by-id/).
 PORTA = os.environ.get("BALANCA_PORT", "/dev/ttyUSB0")
 BAUD  = 4800
-CFG   = dict(bytesize=serial.SEVENBITS, parity=serial.PARITY_EVEN, stopbits=serial.STOPBITS_ONE)
+# A balança não envia paridade par de verdade (~40% dos bytes falhariam em 7E1). No Linux o
+# kernel troca bytes com erro de paridade por 0x00, quebrando os pacotes. Por isso abrimos em
+# 8N1 e removemos o bit alto (& 0x7F) ao ler, o que equivale ao que o macOS entregava.
+CFG   = dict(bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
 
 
 # =========================
@@ -71,7 +74,7 @@ def calcular_valor(d2, d3, d5, d6):
 def ler_continuo():
     global tendencia_subindo, offset
 
-    print(f"\nWelmy W200 — {BAUD} baud 7E1 — {PORTA}")
+    print(f"\nWelmy W200 — {BAUD} baud 8N1 (7 bits úteis) — {PORTA}")
     print("Ctrl+C para sair.\n")
 
     buf = b""
@@ -83,7 +86,7 @@ def ler_continuo():
         while True:
             raw = ser.read(ser.in_waiting or 1)
             if raw:
-                buf += raw
+                buf += bytes(x & 0x7F for x in raw)
 
             while b"\x00" in buf:
                 pkt, buf = buf.split(b"\x00", 1)
