@@ -2,10 +2,12 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from flask_socketio import SocketIO
 import asyncio
+import os
+import time
 import threading
 import selectors
 import struct
-from bleak import BleakClient
+from bleak import BleakClient, BleakScanner
 import shared
 
 from static.functions import init_DB, get_db_connection
@@ -24,7 +26,9 @@ except ImportError:
     print("  Execute: python -m pip install pyserial")
     sys.exit(1)
 
-PORTA = "/dev/cu.usbserial-A5069RR4"
+# No Raspberry o adaptador USB-serial aparece como /dev/ttyUSB0 (ou /dev/ttyACM0).
+# Para um nome fixo, use /dev/serial/by-id/... (ls /dev/serial/by-id/).
+PORTA = os.environ.get("BALANCA_PORT", "/dev/ttyUSB0")
 BAUD  = 4800
 CFG   = dict(bytesize=serial.SEVENBITS, parity=serial.PARITY_EVEN, stopbits=serial.STOPBITS_ONE)
 
@@ -134,6 +138,18 @@ def ler_continuo():
                 shared.ultimo_valor_real = valor_final
 
 
+def ler_continuo_com_retry():
+    """Reabre a porta serial se o adaptador for desconectado ou ainda não existir."""
+    while True:
+        try:
+            ler_continuo()
+        except serial.SerialException as e:
+            print(f"[balança] Erro serial ({PORTA}): {e} — nova tentativa em 3s")
+        except Exception as e:
+            print(f"[balança] Erro inesperado: {e} — nova tentativa em 3s")
+        time.sleep(3)
+
+
 app = Flask(__name__)
 CORS(app)
 app.config['SECRET_KEY'] = 'projetofacom'
@@ -143,7 +159,10 @@ init_DB()
 # AJUSTE 1: Forçar o async_mode='threading' e permitir broadcast
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-DEVICE_UUID = "46093007-6DC6-2835-640C-12A1EEE074F6"
+# No macOS o bleak usa um UUID gerado pelo CoreBluetooth; no Linux (BlueZ/Raspberry)
+# é preciso o endereço MAC do ESP32 (AA:BB:CC:DD:EE:FF) ou o nome anunciado via BLE.
+DEVICE_UUID = os.environ.get("ESP32_BLE_ADDRESS", "")
+DEVICE_NAME = os.environ.get("ESP32_BLE_NAME", "")
 UART_RX_CHAR_UUID = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 UART_TX_CHAR_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
@@ -179,14 +198,22 @@ thread_ble = threading.Thread(target=start_async_loop, args=(loop,), daemon=True
 thread_ble.start()
 
 # --- Thread 2: Balança Serial (ADICIONE ESTA) ---
-thread_balanca = threading.Thread(target=ler_continuo, daemon=True)
+thread_balanca = threading.Thread(target=ler_continuo_com_retry, daemon=True)
 thread_balanca.start()
 
 async def connect_to_esp():
     global esp32_client
     if esp32_client is None or not esp32_client.is_connected:
         try:
-            esp32_client = BleakClient(DEVICE_UUID)
+            alvo = DEVICE_UUID
+            if not alvo and DEVICE_NAME:
+                dispositivo = await BleakScanner.find_device_by_name(DEVICE_NAME, timeout=10.0)
+                if dispositivo is None:
+                    raise RuntimeError(f"ESP32 '{DEVICE_NAME}' não encontrado no scan BLE")
+                alvo = dispositivo
+            if not alvo:
+                raise RuntimeError("Defina ESP32_BLE_ADDRESS (MAC) ou ESP32_BLE_NAME")
+            esp32_client = BleakClient(alvo)
             await esp32_client.connect()
             await esp32_client.start_notify(UART_TX_CHAR_UUID, notification_handler)
             print("Conectado e ouvindo o ESP32!")

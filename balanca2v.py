@@ -3,6 +3,7 @@ POS_DIGITOS = [2, 3, 5, 6]
 POS_DIGITOS_VALIDOS = [3, 5, 6]
 BASE = 0x1F
 
+import os
 import sys
 
 try:
@@ -12,7 +13,7 @@ except ImportError:
     print("  Execute: python -m pip install pyserial")
     sys.exit(1)
 
-PORTA = "/dev/cu.usbserial-A5069RR4"
+PORTA = os.environ.get("BALANCA_PORT", "/dev/ttyUSB0")
 BAUD  = 4800
 CFG   = dict(bytesize=serial.SEVENBITS, parity=serial.PARITY_EVEN, stopbits=serial.STOPBITS_ONE)
 

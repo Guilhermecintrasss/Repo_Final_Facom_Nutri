@@ -2,10 +2,15 @@ import psycopg2
 import os
 import cv2
 import datetime
+import sys
 
 from dotenv import load_dotenv
 
-camera = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
+# macOS usa AVFoundation; no Linux/Raspberry Pi o backend é o V4L2.
+# Use CAMERA_INDEX para escolher a webcam (veja listarCameras.py ou `ls /dev/video*`).
+CAMERA_BACKEND = cv2.CAP_AVFOUNDATION if sys.platform == "darwin" else cv2.CAP_V4L2
+CAMERA_INDEX = int(os.environ.get("CAMERA_INDEX", "0"))
+camera = cv2.VideoCapture(CAMERA_INDEX, CAMERA_BACKEND)
 camera.set(cv2.CAP_PROP_EXPOSURE, -5)
 camera.set(cv2.CAP_PROP_FPS, 45)
 print(f"Câmera aberta: {camera.isOpened()}")
