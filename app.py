@@ -128,8 +128,8 @@ def ler_continuo():
                 # =========================
                 # DETECÇÃO DE ZERO AMBÍGUO
                 # =========================
-                # Dezena em branco chega como 7B, 63 ou 73 (bits deslocados do mesmo código)
-                eh_zero_raw = pkt[2] in (0x7B, 0x63, 0x73)
+                # Dezena em branco: qualquer código que não seja dígito (7B, 63, 73...), exceto 6B (faixa 90)
+                eh_zero_raw = decode_digito(pkt[2]) not in range(10) and pkt[2] != 0x6B
                 offset = 0
                 # =========================
                 # DETECÇÃO DE FAIXA 90KG
