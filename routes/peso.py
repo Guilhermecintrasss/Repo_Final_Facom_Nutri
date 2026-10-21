@@ -9,11 +9,9 @@ PesoRoute = Blueprint("Peso", __name__)
 
 @PesoRoute.route("/medir_peso", methods=['POST'])
 def medir_peso():
-  #Dado para desenvolvimento
   caminhos = capturar_3_frames()
+  # O offset de 80/90/100 kg já é aplicado na leitura da balança (app.py)
   valor = shared.ultimo_valor_real
-  if valor < 10:
-    valor += 80
   print(f"Valor capturado: {valor:.2f} kg")
   conn = get_db_connection()
   if not conn:
