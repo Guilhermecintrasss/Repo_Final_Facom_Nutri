@@ -14,7 +14,8 @@ if [ ! -d venv ]; then
 fi
 
 # Configurações do hardware (ajuste conforme o seu Raspberry)
-export BALANCA_PORT="${BALANCA_PORT:-/dev/ttyUSB0}"
+# BALANCA_PORT é detectada sozinha (FTDI em /dev/serial/by-id); defina só se precisar trocar
+# export BALANCA_PORT=/dev/ttyUSB0
 export CAMERA_INDEX="${CAMERA_INDEX:-0}"
 # export ESP32_BLE_ADDRESS="AA:BB:CC:DD:EE:FF"   # MAC do ESP32
 # export ESP32_BLE_NAME="NOME_DO_ESP32"          # alternativa ao MAC

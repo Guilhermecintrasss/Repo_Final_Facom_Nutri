@@ -13,12 +13,12 @@ except ImportError:
     print("  Execute: python -m pip install pyserial")
     sys.exit(1)
 
-PORTA = os.environ.get("BALANCA_PORT", "/dev/ttyUSB0")
+import config_hw
+
+PORTA = config_hw.PORTA
 BAUD  = 4800
-# A balança não envia paridade par de verdade (~40% dos bytes falhariam em 7E1). No Linux o
-# kernel troca bytes com erro de paridade por 0x00, quebrando os pacotes. Por isso abrimos em
-# 8N1 e removemos o bit alto (& 0x7F) ao ler, o que equivale ao que o macOS entregava.
-CFG   = dict(bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
+# Mac: 7E1 (original). Linux: 8N1 + máscara 0x7F ao ler (ver config_hw.py)
+CFG   = config_hw.cfg_serial(serial)
 
 
 # =========================
@@ -70,7 +70,7 @@ def calcular_valor(d2, d3, d5, d6):
 def ler_continuo():
     global tendencia_subindo, ultimo_valor_real, offset
 
-    print(f"\nWelmy W200 — {BAUD} baud 8N1 (7 bits úteis) — {PORTA}")
+    print(f"\nWelmy W200 — {BAUD} baud {config_hw.FORMATO} — {PORTA}")
     print("Ctrl+C para sair.\n")
 
     buf = b""
