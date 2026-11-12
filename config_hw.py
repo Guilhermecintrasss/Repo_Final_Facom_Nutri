@@ -21,12 +21,12 @@ else:
     _PORTA_PADRAO = _FTDI_BY_ID if os.path.exists(_FTDI_BY_ID) else "/dev/ttyUSB0"
     # No Linux o kernel troca bytes com "erro de paridade" por 0x00, o que quebra os pacotes
     _FORMATO_PADRAO = "8N1"
-    _BLE_PADRAO = ""  # no Linux é preciso o MAC do ESP32 (ESP32_BLE_ADDRESS) ou o nome
+    _BLE_PADRAO = "1C:69:20:A3:15:3A"  # MAC do ESP32_BLE (achado com listar_bluetooth.py)
 
 PORTA = os.environ.get("BALANCA_PORT", _PORTA_PADRAO)
 FORMATO = os.environ.get("BALANCA_FORMATO", _FORMATO_PADRAO).upper()
 BLE_ADDRESS = os.environ.get("ESP32_BLE_ADDRESS", _BLE_PADRAO)
-BLE_NAME = os.environ.get("ESP32_BLE_NAME", "")
+BLE_NAME = os.environ.get("ESP32_BLE_NAME", "ESP32_BLE")  # usado se o endereço não for definido
 
 
 def cfg_serial(serial):

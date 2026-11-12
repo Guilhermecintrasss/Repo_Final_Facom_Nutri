@@ -227,6 +227,11 @@ async def connect_to_esp():
                 alvo = dispositivo
             if not alvo:
                 raise RuntimeError("Defina ESP32_BLE_ADDRESS (MAC) ou ESP32_BLE_NAME")
+            if isinstance(alvo, str):
+                # Procura o dispositivo antes (no Linux o BlueZ precisa tê-lo visto no scan)
+                encontrado = await BleakScanner.find_device_by_address(alvo, timeout=10.0)
+                if encontrado is not None:
+                    alvo = encontrado
             esp32_client = BleakClient(alvo)
             await esp32_client.connect()
             await esp32_client.start_notify(UART_TX_CHAR_UUID, notification_handler)
